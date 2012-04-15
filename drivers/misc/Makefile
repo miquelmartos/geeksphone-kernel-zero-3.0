@@ -66,3 +66,12 @@ obj-$(CONFIG_PMIC8058_XOADC) += pmic8058-xoadc.o
 obj-$(CONFIG_TZCOM) += tzcom.o
 obj-$(CONFIG_QSEECOM) += qseecom.o
 obj-$(CONFIG_QFP_FUSE) += qfp_fuse.o
+obj-$(CONFIG_BMA_ACC)          += bma020.o
+obj-$(CONFIG_SENSORS_MMC31XX)  += mmc31xx.o
+obj-$(CONFIG_ECOMPASS)         += mecs.o
+obj-$(CONFIG_CM3623)           += cm3623.o
+obj-$(CONFIG_THREAD_RIGHT)     += thread_right.o
+obj-y               += version_dev.o
+ifeq ($(CONFIG_BOARD_PW28),y)
+obj-y               += oemrpc_dev.o
+endif

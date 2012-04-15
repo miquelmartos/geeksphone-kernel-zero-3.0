@@ -2587,10 +2587,28 @@ msmsdcc_set_ios(struct mmc_host *mmc, struct mmc_ios *ios)
 	else
 		clk |= MCI_CLK_WIDEBUS_1;
 
+#ifdef CONFIG_BOARD_PW28
+	if (host->pdev_id != 2) {
 	if (msmsdcc_is_pwrsave(host))
 		clk |= MCI_CLK_PWRSAVE;
+	} else {
+		clk &= ~((u32)MCI_CLK_PWRSAVE);
+	}
+#else
+	if (msmsdcc_is_pwrsave(host))
+		clk |= MCI_CLK_PWRSAVE;
+#endif
 
-	clk |= MCI_CLK_FLOWENA;
+        clk |= MCI_CLK_FLOWENA;
+#ifdef CONFIG_BOARD_PW28
+        if (host->pdev_id != 2) {
+        clk |= MCI_CLK_SELECTIN; /* feedback clock */
+        } else {
+                clk &= ~((u32)MCI_CLK_SELECTIN);
+        }
+#else
+        clk |= MCI_CLK_SELECTIN; /* feedback clock */
+#endif
 
 	host->tuning_needed = 0;
 	/*
@@ -4636,10 +4654,16 @@ msmsdcc_probe(struct platform_device *pdev)
 	mmc_add_host(mmc);
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_BOARD_PW28
+	if (host->pdev_id != 2) {
+#endif
 	host->early_suspend.suspend = msmsdcc_early_suspend;
 	host->early_suspend.resume  = msmsdcc_late_resume;
 	host->early_suspend.level   = EARLY_SUSPEND_LEVEL_DISABLE_FB;
 	register_early_suspend(&host->early_suspend);
+#ifdef CONFIG_BOARD_PW28
+	}
+#endif
 #endif
 
 	pr_info("%s: Qualcomm MSM SDCC-core at 0x%016llx irq %d,%d dma %d"
@@ -4808,7 +4832,13 @@ static int msmsdcc_remove(struct platform_device *pdev)
 	mmc_free_host(mmc);
 
 #ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_BOARD_PW28
+	if (host->pdev_id != 2) {
+#endif
 	unregister_early_suspend(&host->early_suspend);
+#ifdef CONFIG_BOARD_PW28
+	}
+#endif
 #endif
 	pm_runtime_disable(&(pdev)->dev);
 	pm_runtime_set_suspended(&(pdev)->dev);
@@ -4925,6 +4955,9 @@ msmsdcc_runtime_suspend(struct device *dev)
 		if (unlikely(work_busy(&mmc->detect.work)))
 			rc = -EAGAIN;
 		else
+#ifdef CONFIG_BOARD_PW28
+			if (host->pdev_id != 2)
+#endif
 			rc = mmc_suspend_host(mmc);
 		pm_runtime_put_noidle(dev);
 
@@ -4978,6 +5011,9 @@ msmsdcc_runtime_resume(struct device *dev)
 			mmc_host_clk_release(mmc);
 		}
 
+#ifdef CONFIG_BOARD_PW28
+		if (host->pdev_id != 2)
+#endif
 		mmc_resume_host(mmc);
 
 		/*

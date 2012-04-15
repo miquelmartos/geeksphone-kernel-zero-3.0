@@ -34,6 +34,10 @@
 #include <wlioctl.h>
 #include <wl_iw.h>
 
+#ifdef CONFIG_BOARD_PW28
+#include <linux/gpio.h>
+#endif
+
 #define WL_ERROR(x) printf x
 #define WL_TRACE(x)
 
@@ -118,6 +122,26 @@ int dhd_customer_oob_irq_map(unsigned long *irq_flags_ptr)
 }
 #endif /* defined(OOB_INTR_ONLY) */
 
+#ifdef CONFIG_BOARD_PW28
+extern int wlan_power(int flag);
+#endif
+
+#ifdef CUSTOMER_HW4
+void dhd_reset_chip(void)
+{
+#ifdef CUSTOM_RESET_GPIO_NUM
+        int reset_gpio_num=CUSTOM_RESET_GPIO_NUM;
+#endif
+        WL_TRACE(("%s: call customer specific GPIO to reset chip\n",__FUNCTION__));
+        gpio_set_value(reset_gpio_num,0);
+        msleep(100);
+        gpio_set_value(reset_gpio_num,1);
+        /* Lets customer power to get stable */
+        msleep(500);
+}
+#endif
+
+
 /* Customer function to control hw specific wlan gpios */
 void
 dhd_customer_gpio_wlan_ctrl(int onoff)
@@ -132,6 +156,9 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #ifdef CUSTOMER_HW2
 			wifi_set_power(0, 0);
 #endif
+#ifdef CONFIG_BOARD_PW28
+			wlan_power(0);
+#endif
 			WL_ERROR(("=========== WLAN placed in RESET ========\n"));
 		break;
 
@@ -144,6 +171,12 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #ifdef CUSTOMER_HW2
 			wifi_set_power(1, 0);
 #endif
+#ifdef CONFIG_BOARD_PW28
+			wlan_power(1);
+#endif
+#ifdef CUSTOMER_HW4
+                        dhd_reset_chip();
+#endif
 			WL_ERROR(("=========== WLAN going back to live  ========\n"));
 		break;
 
@@ -153,6 +186,9 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 #ifdef CUSTOMER_HW
 			bcm_wlan_power_off(1);
 #endif /* CUSTOMER_HW */
+#ifdef CONFIG_BOARD_PW28
+			gpio_set_value(CUSTOM_RESET_GPIO_NUM, 0);
+#endif
 		break;
 
 		case WLAN_POWER_ON:
@@ -160,9 +196,12 @@ dhd_customer_gpio_wlan_ctrl(int onoff)
 				__FUNCTION__));
 #ifdef CUSTOMER_HW
 			bcm_wlan_power_on(1);
+#endif /* CUSTOMER_HW */
+#ifdef CONFIG_BOARD_PW28
+			gpio_set_value(CUSTOM_RESET_GPIO_NUM, 1);
+#endif
 			/* Lets customer power to get stable */
 			OSL_DELAY(200);
-#endif /* CUSTOMER_HW */
 		break;
 	}
 }

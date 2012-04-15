@@ -526,7 +526,11 @@ i2c_new_device(struct i2c_adapter *adap, struct i2c_board_info const *info)
 	if (status) {
 		dev_err(&adap->dev, "Invalid %d-bit I2C address 0x%02hx\n",
 			client->flags & I2C_CLIENT_TEN ? 10 : 7, client->addr);
+#ifdef CONFIG_BOARD_PW28
+		// I2C_BOARD_INFO(CM3623_NAME, 0)
+#else
 		goto out_err_silent;
+#endif
 	}
 
 	/* Check for address business */
@@ -553,7 +557,9 @@ i2c_new_device(struct i2c_adapter *adap, struct i2c_board_info const *info)
 out_err:
 	dev_err(&adap->dev, "Failed to register i2c client %s at 0x%02x "
 		"(%d)\n", client->name, client->addr, status);
+#ifndef CONFIG_BOARD_PW28
 out_err_silent:
+#endif
 	kfree(client);
 	return NULL;
 }

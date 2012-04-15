@@ -249,6 +249,37 @@ extern struct platform_device msm_rpm_stat_device;
 extern struct platform_device msm_device_rng;
 extern struct platform_device apq8064_device_rng;
 
+#define MSM7200A_GPIO_PLATFORM_DATA(ix, begin, end, irq)                \
+        [ix] = {                                                        \
+                .gpio_base      = begin,                                \
+                .ngpio          = end - begin + 1,                      \
+                .irq_base       = MSM_GPIO_TO_INT(begin),               \
+                .irq_summary    = irq,                                  \
+                .regs = {                                               \
+                        .in             = MSM_GPIO_IN_ ## ix,           \
+                        .out            = MSM_GPIO_OUT_ ## ix,          \
+                        .oe             = MSM_GPIO_OE_ ## ix,           \
+                        .int_status     = MSM_GPIO_INT_STATUS_ ## ix,   \
+                        .int_clear      = MSM_GPIO_INT_CLEAR_ ## ix,    \
+                        .int_en         = MSM_GPIO_INT_EN_ ## ix,               \
+                        .int_edge       = MSM_GPIO_INT_EDGE_ ## ix,             \
+                        .int_pos        = MSM_GPIO_INT_POS_ ## ix,              \
+                },                                                      \
+        }
+
+#define MSM7200A_GPIO_DEVICE(ix, pdata)                 \
+        {                                               \
+                .name           = "msm7200a-gpio",      \
+                .id             = ix,                   \
+                .num_resources  = 0,                    \
+                .dev = {                                \
+                        .platform_data = &pdata[ix],    \
+                },                                      \
+        }
+
+extern struct platform_device msm_gpio_devices[];
+
+
 #if defined(CONFIG_CRYPTO_DEV_QCRYPTO) || \
 		defined(CONFIG_CRYPTO_DEV_QCRYPTO_MODULE)
 extern struct platform_device msm9615_qcrypto_device;

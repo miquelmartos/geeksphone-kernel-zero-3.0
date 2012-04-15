@@ -146,6 +146,11 @@ config FB_MSM_LCDC_PANEL
 	select FB_MSM_LCDC
 	default n
 
+config FB_MSM_LCDC_ILI9418_HVGA
+	bool
+	select FB_MSM_LCDC_PANEL
+	default n
+
 config FB_MSM_MIPI_DSI_TOSHIBA
 	bool
 	select FB_MSM_MIPI_DSI
@@ -321,6 +326,13 @@ config FB_MSM_WRITEBACK_MSM_PANEL
 choice
 	prompt "LCD Panel"
 	default FB_MSM_MDDI_AUTO_DETECT
+
+config FB_MSM_LCDC_ILI9418_HVGA_PANEL
+	depends on FB_MSM_LCDC_HW
+	bool "LCDC ILI HVGA Panel"
+	select FB_MSM_LCDC_ILI9418_HVGA
+	---help---
+	  Support for LCDC ILI9418 HVGA (320x480) panel
 
 config FB_MSM_LCDC_PRISM_WVGA_PANEL
 	depends on FB_MSM_LCDC_HW

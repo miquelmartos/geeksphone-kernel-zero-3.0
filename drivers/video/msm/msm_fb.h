@@ -185,7 +185,11 @@ struct msm_fb_data_type {
 struct dentry *msm_fb_get_debugfs_root(void);
 void msm_fb_debugfs_file_create(struct dentry *root, const char *name,
 				u32 *var);
+#ifdef CONFIG_BOARD_PW28
+void msm_fb_set_backlight(struct msm_fb_data_type *mfd, __u32 bkl_lvl, u32 save);
+#else
 void msm_fb_set_backlight(struct msm_fb_data_type *mfd, __u32 bkl_lvl);
+#endif
 
 struct platform_device *msm_fb_add_device(struct platform_device *pdev);
 struct fb_info *msm_fb_get_writeback_fb(void);

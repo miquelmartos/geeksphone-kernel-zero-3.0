@@ -49,8 +49,16 @@
 #include "mdp4.h"
 
 #ifdef CONFIG_FB_MSM_LOGO
+#ifdef CONFIG_BOARD_PW28
+#define INIT_IMAGE_FILE "/320_480logo.rle"
+#else
 #define INIT_IMAGE_FILE "/initlogo.rle"
+#endif
 extern int load_565rle_image(char *filename);
+#endif
+
+#ifdef CONFIG_BOARD_PW28
+extern int battchg_pause;
 #endif
 
 #ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
@@ -178,7 +186,11 @@ static void msm_fb_set_bl_brightness(struct led_classdev *led_cdev,
 	if (!bl_lvl && value)
 		bl_lvl = 1;
 
+#ifdef CONFIG_BOARD_PW28
+	msm_fb_set_backlight(mfd, bl_lvl, 1);
+#else
 	msm_fb_set_backlight(mfd, bl_lvl);
+#endif
 }
 
 static struct led_classdev backlight_led = {
@@ -359,7 +371,11 @@ static int msm_fb_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	mfd->panel_info.frame_count = 0;
+#ifdef CONFIG_BOARD_PW28
+	mfd->bl_level = mfd->panel_info.bl_max;
+#else
 	mfd->bl_level = 0;
+#endif
 #ifdef CONFIG_FB_MSM_OVERLAY
 	mfd->overlay_play_enable = 1;
 #endif
@@ -711,7 +727,11 @@ static void msmfb_early_resume(struct early_suspend *h)
 static int unset_bl_level, bl_updated;
 static int bl_level_old;
 
+#ifdef CONFIG_BOARD_PW28
+void msm_fb_set_backlight(struct msm_fb_data_type *mfd, __u32 bkl_lvl, u32 save)
+#else
 void msm_fb_set_backlight(struct msm_fb_data_type *mfd, __u32 bkl_lvl)
+#endif
 {
 	struct msm_fb_panel_data *pdata;
 
@@ -726,13 +746,21 @@ void msm_fb_set_backlight(struct msm_fb_data_type *mfd, __u32 bkl_lvl)
 
 	if ((pdata) && (pdata->set_backlight)) {
 		down(&mfd->sem);
-		if (bl_level_old == bkl_lvl) {
-			up(&mfd->sem);
-			return;
+#ifdef CONFIG_BOARD_PW28
+		if ((bkl_lvl != mfd->bl_level) || (!save)) {
+			u32 old_lvl;
+
+			old_lvl = mfd->bl_level;
+			mfd->bl_level = bkl_lvl;
+			pdata->set_backlight(mfd);
+
+			if (!save)
+				mfd->bl_level = old_lvl;
 		}
+#else
 		mfd->bl_level = bkl_lvl;
 		pdata->set_backlight(mfd);
-		bl_level_old = mfd->bl_level;
+#endif
 		up(&mfd->sem);
 	}
 }
@@ -760,6 +788,10 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 			ret = pdata->on(mfd->pdev);
 			if (ret == 0) {
 				mfd->panel_power_on = TRUE;
+#ifdef CONFIG_BOARD_PW28
+				msm_fb_set_backlight(mfd,
+						     mfd->bl_level, 0);
+#endif
 
 /* ToDo: possible conflict with android which doesn't expect sw refresher */
 /*
@@ -793,6 +825,9 @@ static int msm_fb_blank_sub(int blank_mode, struct fb_info *info,
 			if (ret)
 				mfd->panel_power_on = curr_pwr_state;
 
+#ifdef CONFIG_BOARD_PW28
+			msm_fb_set_backlight(mfd, 0, 0);
+#endif
 			mfd->op_enable = TRUE;
 		} else {
 			if (pdata->power_ctrl)
@@ -1302,6 +1337,9 @@ static int msm_fb_register(struct msm_fb_data_type *mfd)
 	     mfd->index, fbi->var.xres, fbi->var.yres, fbi->fix.smem_len);
 
 #ifdef CONFIG_FB_MSM_LOGO
+#ifdef CONFIG_BOARD_PW28
+	if (battchg_pause == 0)
+#endif
 	if (!load_565rle_image(INIT_IMAGE_FILE)) ;	/* Flip buffer */
 #endif
 	ret = 0;

@@ -29,9 +29,12 @@
 #define has_tls_reg		1
 #define set_tls		set_tls_none
 #elif defined(CONFIG_CPU_V6)
-#define tls_emu		0
-#define has_tls_reg		(elf_hwcap & HWCAP_TLS)
-#define set_tls		set_tls_v6
+#define tls_emu         0
+#define has_tls_reg             0
+#define set_tls         set_tls_software
+//#define tls_emu		0
+//#define has_tls_reg		(elf_hwcap & HWCAP_TLS)
+//#define set_tls		set_tls_v6
 #elif defined(CONFIG_CPU_32v6K)
 #define tls_emu		0
 #define has_tls_reg		1

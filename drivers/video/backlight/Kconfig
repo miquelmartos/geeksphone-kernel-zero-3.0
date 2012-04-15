@@ -327,6 +327,12 @@ config BACKLIGHT_PCF50633
 	  If you have a backlight driven by a NXP PCF50633 MFD, say Y here to
 	  enable its driver.
 
+config BACKLIGHT_CHARGE_PUMP
+	bool "Charge Pump Driver for Backlight"
+
+config BACKLIGHT_TPS61045
+	bool "Charge Pump Driver for TPS61045"
+
 endif # BACKLIGHT_CLASS_DEVICE
 
 endif # BACKLIGHT_LCD_SUPPORT

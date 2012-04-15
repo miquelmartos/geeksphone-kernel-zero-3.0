@@ -27,6 +27,18 @@
 #include <linux/msm_ssbi.h>
 #include <mach/msm_bus.h>
 
+#include <asm/clkdev.h>
+
+/* platform device data structures */
+struct msm_acpu_clock_platform_data {
+	uint32_t acpu_switch_time_us;
+	uint32_t max_speed_delta_khz;
+	uint32_t vdd_switch_time_us;
+	unsigned int max_axi_khz;
+	unsigned int max_vdd;
+	int (*acpu_set_vdd) (int mvolts);
+};
+
 struct msm_camera_io_ext {
 	uint32_t mdcphy;
 	uint32_t mdcsz;
@@ -427,6 +439,8 @@ struct msm_i2c_platform_data {
 	int pri_dat;
 	int aux_clk;
 	int aux_dat;
+	const char *clk;
+	const char *pclk;
 	int src_clk_rate;
 	int use_gsbi_shared_mode;
 	void (*msm_i2c_config_gpio)(int iface, int config_type);
@@ -471,6 +485,7 @@ void msm_map_msm7x30_io(void);
 void msm_map_fsm9xxx_io(void);
 void msm_map_copper_io(void);
 void msm_init_irq(void);
+void msm_acpu_clock_init(struct msm_acpu_clock_platform_data *);
 void msm_copper_init_irq(void);
 void vic_handle_irq(struct pt_regs *regs);
 void msm_copper_reserve(void);

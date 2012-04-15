@@ -36,6 +36,12 @@ struct gpio_event_info {
 		     struct gpio_event_info *info,
 		     void **data, unsigned int dev, unsigned int type,
 		     unsigned int code, int value); /* out events */
+#ifdef CONFIG_BOARD_PW28
+	int (*filter)(struct gpio_event_input_devs *input_devs,
+		     struct gpio_event_info *info,
+		     void *data, unsigned int dev, unsigned int *type,
+		     unsigned int *code, int *value); /* out events */
+#endif
 	bool no_suspend;
 };
 

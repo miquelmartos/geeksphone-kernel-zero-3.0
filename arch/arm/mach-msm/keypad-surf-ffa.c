@@ -37,14 +37,23 @@
  41: KYPD_MEMO
 */
 
+#ifdef CONFIG_BOARD_PW28
+static unsigned int keypad_row_gpios[6] = {
+	31, 32, 33, 34, 35
+#else
 static unsigned int keypad_row_gpios[] = {
 	31, 32, 33, 34, 35, 41
+#endif
 #if SCAN_FUNCTION_KEYS
 	, 42
 #endif
 };
 
+#ifdef CONFIG_BOARD_PW28
+static unsigned int keypad_col_gpios[5] = { 36, 37, 39, 40, 41 };   /*SWH index(xxx_xxx, col_in)*/
+#else
 static unsigned int keypad_col_gpios[] = { 36, 37, 38, 39, 40 };
+#endif
 
 static unsigned int keypad_row_gpios_8k_ffa[] = {31, 32, 33, 34, 35, 36};
 static unsigned int keypad_col_gpios_8k_ffa[] = {38, 39, 40, 41, 42};
@@ -102,6 +111,17 @@ static const unsigned short keypad_keymap_surf[ARRAY_SIZE(keypad_col_gpios) *
 
 static const unsigned short keypad_keymap_ffa[ARRAY_SIZE(keypad_col_gpios) *
 					      ARRAY_SIZE(keypad_row_gpios)] = {
+#ifdef CONFIG_BOARD_PW28
+	[KEYMAP_INDEX(2, 1)] = KEY_BACK,	/* B */
+	[KEYMAP_INDEX(2, 3)] = 235,		//KEY_CAMERA,             
+
+	[KEYMAP_INDEX(3, 1)] = KEY_SEND,	//232, /* KEY_CENTER */ /* i */
+	[KEYMAP_INDEX(3, 4)] = KEY_VOLUMEUP,
+
+	[KEYMAP_INDEX(4, 0)] = 230,		//KEY_VOLUMEDOWN,
+	[KEYMAP_INDEX(4, 1)] = KEY_MENU,	//KEY_HOMEPAGE, //KEY_HOME,					//KEY_SOUND,
+	[KEYMAP_INDEX(4, 4)] = KEY_VOLUMEDOWN,
+#else
 	/*[KEYMAP_INDEX(0, 0)] = ,*/
 	/*[KEYMAP_INDEX(0, 1)] = ,*/
 	[KEYMAP_INDEX(0, 2)] = KEY_1,
@@ -137,6 +157,7 @@ static const unsigned short keypad_keymap_ffa[ARRAY_SIZE(keypad_col_gpios) *
 	[KEYMAP_INDEX(5, 2)] = 230, /*SOFT2*/ /* 2 */
 	[KEYMAP_INDEX(5, 3)] = KEY_MENU,      /* 1 */
 	[KEYMAP_INDEX(5, 4)] = KEY_7,
+#endif
 };
 
 #define QSD8x50_FFA_KEYMAP_SIZE (ARRAY_SIZE(keypad_col_gpios_8k_ffa) * \
@@ -259,8 +280,43 @@ static struct gpio_event_matrix_info keypad_matrix_info_7k_ffa = {
 			  GPIOKPF_PRINT_UNMAPPED_KEYS
 };
 
+#ifdef CONFIG_BOARD_PW28
+/*+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++*/
+#define GPIO_HEADSET_KEY        92      /*SWH*/
+
+static struct gpio_event_direct_entry headset_key_map[] = {
+	{ GPIO_HEADSET_KEY,              233 /*KEY_HEADSETHOOK */, },
+};
+extern bool hs_is_key_enabled(void);
+int hs_key_filter(struct gpio_event_input_devs *input_devs,
+	     struct gpio_event_info *info,
+	     void *data, unsigned int dev, unsigned int *type,
+	     unsigned int *code, int *value)
+{
+	if (hs_is_key_enabled() && (*value == 0)) {
+		input_event(input_devs->dev[dev], *type, *code, 1);
+		input_event(input_devs->dev[dev], *type, *code, 0);
+	}
+
+	return 1;
+}
+
+static struct gpio_event_input_info headset_key_input_info = {
+	.info.func = gpio_event_input_func,
+	.flags = 0 ,
+	.type = EV_KEY,
+	.keymap = headset_key_map,
+	.keymap_size = ARRAY_SIZE(headset_key_map)
+};
+
+/*------------------------------------------------------------------*/
+#endif
+
 static struct gpio_event_info *keypad_info_7k_ffa[] = {
-	&keypad_matrix_info_7k_ffa.info
+	&keypad_matrix_info_7k_ffa.info,
+#ifdef CONFIG_BOARD_PW28
+	&headset_key_input_info.info, /*SWH*/
+#endif
 };
 
 static struct gpio_event_platform_data keypad_data_7k_ffa = {

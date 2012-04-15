@@ -222,6 +222,13 @@ static int __cpuinit msm_cpufreq_init(struct cpufreq_policy *policy)
 	return 0;
 }
 
+#ifdef CONFIG_BOARD_PW28
+static struct freq_attr *msm_cpufreq_attr[] = {
+    &cpufreq_freq_attr_scaling_available_freqs,
+    NULL,
+};
+#endif
+
 static int msm_cpufreq_suspend(void)
 {
 	int cpu;
@@ -280,10 +287,10 @@ static ssize_t store_mfreq(struct sysdev_class *class,
 
 static SYSDEV_CLASS_ATTR(mfreq, 0200, NULL, store_mfreq);
 
-static struct freq_attr *msm_freq_attr[] = {
-	&cpufreq_freq_attr_scaling_available_freqs,
-	NULL,
-};
+//static struct freq_attr *msm_freq_attr[] = {
+//	&cpufreq_freq_attr_scaling_available_freqs,
+//	NULL,
+//};
 
 static struct cpufreq_driver msm_cpufreq_driver = {
 	/* lps calculations are handled here. */
@@ -292,7 +299,9 @@ static struct cpufreq_driver msm_cpufreq_driver = {
 	.verify		= msm_cpufreq_verify,
 	.target		= msm_cpufreq_target,
 	.name		= "msm",
-	.attr		= msm_freq_attr,
+#ifdef CONFIG_BOARD_PW28
+	.attr		= msm_cpufreq_attr,
+#endif
 };
 
 static struct notifier_block msm_cpufreq_pm_notifier = {

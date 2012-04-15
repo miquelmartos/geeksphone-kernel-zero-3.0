@@ -38,7 +38,10 @@ enum adie_svc_status_type{
 enum adie_block_enum_type{
 	MIC_BIAS,
 	HSSD,
-	HPH_PA
+	HPH_PA,
+#ifdef CONFIG_BOARD_PW28
+	AUX_PGA_GAIN,
+#endif
 };
 
 enum adie_config_enum_type{

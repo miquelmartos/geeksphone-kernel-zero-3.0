@@ -36,6 +36,15 @@ config ARCH_MSM7X27
 	select QCACHE
 	select MSM_PM2 if PM
 
+config BOARD_PW28
+        depends on ARCH_MSM7X27
+        depends on MACH_MSM7X27_FFA
+        depends on !MSM_STACKED_MEMORY
+        default y
+        bool "SIMCOM PW28"
+        help
+          Support for the SIMCOM PW28 board
+
 config ARCH_MSM7X30
 	bool "MSM7x30"
 	select ARCH_MSM_SCORPION

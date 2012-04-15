@@ -63,6 +63,9 @@ static enum hrtimer_restart gpio_event_input_timer_func(struct hrtimer *timer)
 	unsigned long irqflags;
 	uint8_t debounce;
 	bool sync_needed;
+#ifdef CONFIG_BOARD_PW28
+        unsigned int type, code;
+#endif
 
 #if 0
 	key_entry = kp->keys_info->keymap;
@@ -130,8 +133,19 @@ static enum hrtimer_restart gpio_event_input_timer_func(struct hrtimer *timer)
 			pr_info("gpio_keys_scan_keys: key %x-%x, %d (%d) "
 				"changed to %d\n", ds->info->type,
 				key_entry->code, i, key_entry->gpio, pressed);
+#ifdef CONFIG_BOARD_PW28
+       		type = ds->info->type; 
+       		code = key_entry->code;
+        	if (ds->info->info.filter) {
+            		ds->info->info.filter(ds->input_devs, (struct gpio_event_info *)ds->info, ds, key_entry->dev,
+                		&type, &code, &pressed);
+		}
+		input_event(ds->input_devs->dev[key_entry->dev], type,
+			code, pressed);
+#else
 		input_event(ds->input_devs->dev[key_entry->dev], ds->info->type,
 			    key_entry->code, pressed);
+#endif
 		sync_needed = true;
 	}
 	if (sync_needed) {
@@ -168,6 +182,9 @@ static irqreturn_t gpio_event_input_irq_handler(int irq, void *dev_id)
 	const struct gpio_event_direct_entry *key_entry;
 	unsigned long irqflags;
 	int pressed;
+#ifdef CONFIG_BOARD_PW28
+	unsigned int type, code;
+#endif
 
 	if (!ds->use_irq)
 		return IRQ_HANDLED;
@@ -202,8 +219,19 @@ static irqreturn_t gpio_event_input_irq_handler(int irq, void *dev_id)
 				"(%d) changed to %d\n",
 				ds->info->type, key_entry->code, keymap_index,
 				key_entry->gpio, pressed);
+#ifdef CONFIG_BOARD_PW28
+       		type = ds->info->type; 
+       		code = key_entry->code;
+        	if (ds->info->info.filter) {
+            		ds->info->info.filter(ds->input_devs, (struct gpio_event_info *)ds->info, ds, key_entry->dev,
+                		&type, &code, &pressed);
+		}
+		input_event(ds->input_devs->dev[key_entry->dev], type,
+			code, pressed);
+#else
 		input_event(ds->input_devs->dev[key_entry->dev], ds->info->type,
 			    key_entry->code, pressed);
+#endif
 		input_sync(ds->input_devs->dev[key_entry->dev]);
 	}
 	return IRQ_HANDLED;
@@ -374,3 +402,6 @@ err_bad_keymap:
 err_ds_alloc_failed:
 	return ret;
 }
+#ifdef CONFIG_BOARD_PW28
+EXPORT_SYMBOL(gpio_event_input_func);
+#endif

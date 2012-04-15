@@ -237,8 +237,13 @@ int mdp_lcdc_on(struct platform_device *pdev)
 
 	lcdc_underflow_clr |= 0x80000000;	/* enable recovery */
 #else
+#ifdef CONFIG_BOARD_PW28
+	hsync_polarity = 1;
+	vsync_polarity = 1;
+#else
 	hsync_polarity = 0;
 	vsync_polarity = 0;
+#endif
 #endif
 	data_en_polarity = 0;
 
