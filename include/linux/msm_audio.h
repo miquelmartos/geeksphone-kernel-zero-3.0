@@ -251,6 +251,17 @@ struct msm_snd_endpoint {
 #define SND_AVC_CTL _IOW(SND_IOCTL_MAGIC, 6, unsigned *)
 #define SND_AGC_CTL _IOW(SND_IOCTL_MAGIC, 7, unsigned *)
 
+#ifdef CONFIG_BOARD_PW28
+struct acm_diag_req
+{
+  uint16_t cmd;
+  uint8_t *buf;
+  uint32_t size;
+};
+
+#define SND_ACM_DIAG_REQ _IOWR(SND_IOCTL_MAGIC, 8, struct acm_diag_req *)
+#endif
+
 struct msm_audio_pcm_config {
 	uint32_t pcm_feedback;	/* 0 - disable > 0 - enable */
 	uint32_t buffer_count;	/* Number of buffers to allocate */

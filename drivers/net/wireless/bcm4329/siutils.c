@@ -171,9 +171,10 @@ si_buscore_prep(si_info_t *sii, uint bustype, uint devid, void *sdh)
 				OSL_DELAY(65);
 			}
 		}
-
+#ifndef MMC_SDIO_FORCE_PULLUP
 		/* Also, disable the extra SDIO pull-ups */
 		bcmsdh_cfg_write(sdh, SDIO_FUNC_1, SBSDIO_FUNC1_SDIOPULLUP, 0, NULL);
+#endif
 	}
 
 

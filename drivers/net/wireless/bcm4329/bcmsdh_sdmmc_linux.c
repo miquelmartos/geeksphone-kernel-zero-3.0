@@ -69,6 +69,11 @@ void sdio_function_cleanup(void);
 #define DESCRIPTION "bcmsdh_sdmmc Driver"
 #define AUTHOR "Broadcom Corporation"
 
+#ifdef CUSTOMER_HW4
+int sdio_reset_comm(struct mmc_card *card);
+void dhd_reset_chip(void);
+#endif
+
 /* module param defaults */
 static int clockoverride = 0;
 
@@ -94,7 +99,22 @@ static int bcmsdh_sdmmc_probe(struct sdio_func *func,
 	sd_trace(("sdio_device: 0x%04x\n", func->device));
 	sd_trace(("Function#: 0x%04x\n", func->num));
 
+	/*Linux native mmc stack enables high speed only if card's CCCR
+	version >=1.20. BCM4329 reports CCCR Version 1.10 but it supports
+	high speed*/
+#ifdef MMC_SDIO_BROKEN_CCCR_REV
+        if( func->vendor == SDIO_VENDOR_ID_BROADCOM && \
+                func->device == SDIO_DEVICE_ID_BROADCOM_4329)
+        {
+                sd_trace(("setting high speed support ignoring card CCCR\n"));
+                func->card->cccr.high_speed = 1;
+        }
+#endif
 	if (func->num == 1) {
+#ifdef CUSTOMER_HW4
+                dhd_reset_chip();
+                sdio_reset_comm(func->card);
+#endif
 		sdio_func_0.num = 0;
 		sdio_func_0.card = func->card;
 		gInstance->func[0] = &sdio_func_0;
@@ -136,6 +156,7 @@ static const struct sdio_device_id bcmsdh_sdmmc_ids[] = {
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4325) },
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4329) },
 	{ SDIO_DEVICE(SDIO_VENDOR_ID_BROADCOM, SDIO_DEVICE_ID_BROADCOM_4319) },
+	{ SDIO_DEVICE_CLASS(0x0) },
 	{ /* end: all zeroes */				},
 };
 
