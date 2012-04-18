@@ -110,11 +110,11 @@
 #ifdef CONFIG_USB_G_ANDROID
 
 static char *usb_functions_ums[] = {
-	"mass_storage",
+	"usb_mass_storage",
 };
 
 static char *usb_functions_ums_adb[] = {
-	"mass_storage",
+	"usb_mass_storage",
 	"adb",
 };
 
@@ -129,26 +129,26 @@ static char *usb_functions_rndis_adb[] = {
 
 static char *usb_functions_all[] = {
 	"rndis",
-	"mass_storage",
+	"usb_mass_storage",
 	"adb",
 };
 static struct android_usb_product usb_products[] = {
-	{
+	[0] = {
 		.product_id	= 0x9026,
 		.num_functions	= ARRAY_SIZE(usb_functions_ums),
 		.functions	= usb_functions_ums,
 	},
-	{
+	[1] = {
 		.product_id	= 0x9018,
 		.num_functions	= ARRAY_SIZE(usb_functions_ums_adb),
 		.functions	= usb_functions_ums_adb,
 	},
-	{
+	[2] = {
 		.product_id	= 0xf00e,
 		.num_functions	= ARRAY_SIZE(usb_functions_rndis),
 		.functions	= usb_functions_rndis,
 	},
-	{
+	[3] = {
 		.product_id	= 0x9024,
 		.num_functions	= ARRAY_SIZE(usb_functions_rndis_adb),
 		.functions	= usb_functions_rndis_adb,
@@ -157,8 +157,11 @@ static struct android_usb_product usb_products[] = {
 
 
 static struct usb_ether_platform_data rndis_pdata = {
-        .vendorID       = 0x05C6,
-        .vendorDescr    = "Qualcomm Incorporated",
+	.ethaddr = {
+		0x00, 0x00, 0x00, 0x00, 0x00, 0x00
+	},
+	 .vendorID       = 0x05C6,
+	 .vendorDescr    = "Qualcomm Incorporated",
 };
 
 static struct platform_device rndis_device = {
@@ -177,8 +180,8 @@ static struct usb_mass_storage_platform_data mass_storage_pdata = {
 	.can_stall	= 1,
 };
 
-static struct platform_device mass_storage_device = {
-	.name	= "mass_storage",
+static struct platform_device usb_mass_storage_device = {
+	.name	= "usb_mass_storage",
 	.id	= -1,
 	.dev	= {
 		.platform_data = &mass_storage_pdata,
@@ -211,48 +214,7 @@ static struct platform_device android_usb_device = {
 		.platform_data = &android_usb_pdata,
 	},
 };
-
-#ifdef MIQUEL
-static int __init board_serialno_setup(char *serialno)
-{
-	int i;
-	char *src = serialno;
-
-	rndis_pdata.ethaddr[0] = 0x02;
-	for (i = 0; *src; i++) {
-		/* XOR the USB serial across the remaining bytes */
-		rndis_pdata.ethaddr[i % (ETH_ALEN - 1) + 1] ^= *src++;
-	}
-
-	android_usb_pdata.serial_number = serialno;
-	return 1;
-}
-__setup("androidboot.serialno=", board_serialno_setup);
-
-#endif // MIQUEL
 #endif // CONFIG_USB_G_ANDROID
-
-#ifdef CONFIG_USB_EHCI_MSM_72K
-static void msm_hsusb_vbus_power(unsigned phy_info, int on)
-{
-	if (on)
-		msm_hsusb_vbus_powerup();
-	else
-		msm_hsusb_vbus_shutdown();
-}
-
-static struct msm_usb_host_platform_data msm_usb_host_pdata = {
-	.phy_info       = (USB_PHY_INTEGRATED | USB_PHY_MODEL_65NM),
-};
-
-static void __init msm7x2x_init_host(void)
-{
-	if (machine_is_msm7x25_ffa() || machine_is_msm7x27_ffa())
-		return;
-
-	msm_add_host(0, &msm_usb_host_pdata);
-}
-#endif
 
 #ifdef CONFIG_USB_MSM_OTG_72K
 static int hsusb_rpc_connect(int connect)
@@ -262,7 +224,6 @@ static int hsusb_rpc_connect(int connect)
 	else
 		return msm_hsusb_rpc_close();
 }
-#endif
 
 static int msm_hsusb_ldo_init(int init)
 {
@@ -332,13 +293,10 @@ static int msm_hsusb_pmic_notif_init(void (*callback)(int online), int init)
 
 static struct msm_otg_platform_data msm_otg_pdata = {
 	.rpc_connect	= hsusb_rpc_connect,
-	.pmic_vbus_notif_init         = msm_hsusb_pmic_notif_init,
+	.pmic_vbus_notif_init    = msm_hsusb_pmic_notif_init,
 	.chg_vbus_draw		 = hsusb_chg_vbus_draw,
 	.chg_connected		 = hsusb_chg_connected,
 	.chg_init		 = hsusb_chg_init,
-#ifdef CONFIG_USB_EHCI_MSM_72K
-	.vbus_power = msm_hsusb_vbus_power,
-#endif
 	.ldo_init		= msm_hsusb_ldo_init,
 	.pclk_required_during_lpm = 1,
 };
@@ -346,23 +304,7 @@ static struct msm_otg_platform_data msm_otg_pdata = {
 #ifdef CONFIG_USB_GADGET
 static struct msm_hsusb_gadget_platform_data msm_gadget_pdata;
 #endif
-
-
-
-static struct resource ram_console_resource[] = {
-	{
-		.flags  = IORESOURCE_MEM,
-	}
-};
-
-static struct platform_device ram_console_device = {
-	.name = "ram_console",
-	.id = -1,
-	.num_resources  = ARRAY_SIZE(ram_console_resource),
-	.resource       = ram_console_resource,
-};
-
-
+#endif
 
 #define SND(desc, num) { .name = #desc, .id = num }
 static struct snd_endpoint snd_endpoints_list[] = {
@@ -541,18 +483,6 @@ static struct platform_device msm_device_pmic_leds = {
 	.id = -1,
 };
 
-
-static struct android_pmem_platform_data android_pmem_kernel_ebi1_pdata = {
-	.name = PMEM_KERNEL_EBI1_DATA_NAME,
-	/* if no allocator_type, defaults to PMEM_ALLOCATORTYPE_BITMAP,
-	 * the only valid choice at this time. The board structure is
-	 * set to all zeros by the C runtime initialization and that is now
-	 * the enum value of PMEM_ALLOCATORTYPE_BITMAP, now forced to 0 in
-	 * include/linux/android_pmem.h.
-	 */
-	.cached = 0,
-};
-
 static struct android_pmem_platform_data android_pmem_pdata = {
 	.name = "pmem",
 	.allocator_type = PMEM_ALLOCATORTYPE_BITMAP,
@@ -592,14 +522,6 @@ static struct platform_device android_pmem_audio_device = {
 	.id = 2,
 	.dev = { .platform_data = &android_pmem_audio_pdata },
 };
-
-static struct platform_device android_pmem_kernel_ebi1_device = {
-	.name = "android_pmem",
-	.id = 4,
-	.dev = { .platform_data = &android_pmem_kernel_ebi1_pdata },
-};
-
-
 
 static struct msm_handset_platform_data hs_platform_data = {
 	.hs_name = "7k_handset",
@@ -879,6 +801,21 @@ static struct platform_device msm_fb_device = {
 		.platform_data = &msm_fb_pdata,
 	}
 };
+
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+static struct resource ram_console_resource[] = {
+	{
+		.flags  = IORESOURCE_MEM,
+	}
+};
+
+static struct platform_device ram_console_device = {
+	.name = "ram_console",
+	.id = -1,
+	.num_resources  = ARRAY_SIZE(ram_console_resource),
+	.resource       = ram_console_resource,
+};
+#endif
 
 #ifdef CONFIG_BT
 static struct platform_device msm_bt_power_device = {
@@ -1450,57 +1387,58 @@ static struct platform_device *early_devices[] __initdata = {
 };
 
 static struct platform_device *devices[] __initdata = {
-
-	&msm_bl_device,	
-	&msm_charge_pump_device,
-	&msm_fb_device,
-	&lcdc_ili9325sim_panel_device,
-
-#ifdef CONFIG_BT
-	&msm_bt_power_device,
-#endif
-
-#ifdef CONFIG_MT9D112
-	&msm_camera_sensor_mt9d112,
-#endif
-
-#ifdef CONFIG_ARCH_MSM7X27
-	&msm_kgsl_3d0,
-#endif
-	&hs_device,
-	&msm_batt_device,
-	&msm_device_tssc,
 	&asoc_msm_pcm,
 	&asoc_msm_dai0,
 	&asoc_msm_dai1,
+
+#ifdef CONFIG_ANDROID_RAM_CONSOLE
+	&ram_console_device,
+#endif
 	&msm_device_smd,
-	&msm_device_uart_dm1,
 	&msm_device_dmov,
 	&msm_device_nand,
-	
+
 #ifdef CONFIG_USB_MSM_OTG_72K
 	&msm_device_otg,
 #ifdef CONFIG_USB_GADGET
 	&msm_device_gadget_peripheral,
 #endif
 #endif
-	&ram_console_device,
 
 #ifdef CONFIG_USB_G_ANDROID
-	&mass_storage_device,
+	&usb_mass_storage_device,
 	&rndis_device,
 	&android_usb_device,
 #endif
+
 	&msm_device_i2c,
 	&msm_device_gpio_i2c,
-	&android_pmem_kernel_ebi1_device,
+	&msm_device_tssc,
 	&android_pmem_device,
 	&android_pmem_adsp_device,
 	&android_pmem_audio_device,
+	
+	&msm_bl_device,	
+	&msm_charge_pump_device,
+	&msm_fb_device,
+	&lcdc_ili9325sim_panel_device,
+	&msm_device_uart_dm1,
+#ifdef CONFIG_BT
+	&msm_bt_power_device,
+#endif
 	&msm_device_pmic_leds,
 	&msm_device_snd,
 	&msm_device_adspdec,
+
+#ifdef CONFIG_MT9D112
+	&msm_camera_sensor_mt9d112,
+#endif
 	&msm_bluesleep_device,
+#ifdef CONFIG_ARCH_MSM7X27
+	&msm_kgsl_3d0,
+#endif
+	&hs_device,
+	&msm_batt_device,
 };
 
 static struct msm_panel_common_pdata mdp_pdata = {
@@ -1952,29 +1890,8 @@ static void usb_mpp_init(void)
 	}
 }
 
-#define CUSTOMER_BOOT_MODE
-
-#ifdef CUSTOMER_BOOT_MODE
 #include "smd_private.h"
 #define ID_SMD_UUID 12
-/*
-char *board_serial;
-static void generate_serial_from_uuid(void)
-{
-	unsigned *uuid;
-	board_serial = kzalloc(64, GFP_KERNEL);
-
-	uuid = smem_find(ID_SMD_UUID, 4);
-	sprintf(board_serial,"ZBR%u",(uuid[2]*uuid[3]));
-
-	board_serialno_setup(board_serial);
-
-
-	sprintf(boot_command_line,"%s androidboot.serialno=%s",saved_command_line,board_serial);
-	saved_command_line = alloc_bootmem(strlen (boot_command_line)+1);
-	strcpy(saved_command_line, boot_command_line);
-}
-*/
 
 void get_sd_boot_mode(unsigned *mode)
 {
@@ -2001,13 +1918,10 @@ void get_sd_boot_mode(unsigned *mode)
 
 EXPORT_SYMBOL(get_sd_boot_mode);
 
-#endif
 static void __init msm7x2x_init(void)
 {
 	struct kobject *properties_kobj;
         msm7627_init_regulators();
-
-	wlan_power(1);
 
 	msm_clock_init(&msm7x27_clock_init_data);
 
@@ -2040,6 +1954,7 @@ static void __init msm7x2x_init(void)
 	acpuclk_init(&acpuclk_7x27_soc_data);
 
 	usb_mpp_init();
+
 
 #ifdef CONFIG_USB_MSM_OTG_72K
 	msm_device_otg.dev.platform_data = &msm_otg_pdata;
@@ -2092,8 +2007,9 @@ static void __init msm7x2x_init(void)
 	msm_pm_set_platform_data(msm7x27_pm_data,
 		ARRAY_SIZE(msm7x27_pm_data));
 
-        BUG_ON(msm_pm_boot_init(&msm_pm_boot_pdata));
+	BUG_ON(msm_pm_boot_init(&msm_pm_boot_pdata));
 
+	wlan_power(1);
 }
 
 static unsigned pmem_kernel_ebi1_size = PMEM_KERNEL_EBI1_SIZE;
@@ -2140,70 +2056,22 @@ static void __init msm_msm7x2x_allocate_memory_regions(void)
 {
 	void *addr;
 	unsigned long size;
-
-	size = pmem_mdp_size;
-	if (size) {
-		addr = alloc_bootmem(size);
-		android_pmem_pdata.start = __pa(addr);
-		android_pmem_pdata.size = size;
-		pr_info("allocating %lu bytes at %p (%lx physical) for mdp "
-			"pmem arena\n", size, addr, __pa(addr));
-	}
-
-	size = pmem_adsp_size;
-	if (size) {
-		addr = alloc_bootmem(size);
-		android_pmem_adsp_pdata.start = __pa(addr);
-		android_pmem_adsp_pdata.size = size;
-		pr_info("allocating %lu bytes at %p (%lx physical) for adsp "
-			"pmem arena\n", size, addr, __pa(addr));
-	}
-
-#if 0
-	size = pmem_audio_size;
-	if (size) {
-		addr = alloc_bootmem(size);
-		android_pmem_audio_pdata.start = __pa(addr);
-		android_pmem_audio_pdata.size = size;
-		pr_info("allocating %lu bytes (at %lx physical) for audio "
-			"pmem arena\n", size , __pa(addr));
-	}
-#else
-	size = MSM_PMEM_AUDIO_SIZE ;
-	android_pmem_audio_pdata.start = MSM_PMEM_AUDIO_START_ADDR ;
-	android_pmem_audio_pdata.size = size;
-	pr_info("allocating %lu bytes (at %lx physical) for audio "
-		"pmem arena\n", size , MSM_PMEM_AUDIO_START_ADDR);
-#endif
-
+/*
 	size = fb_size ? : MSM_FB_SIZE;
 	addr = alloc_bootmem(size);
 	msm_fb_resources[0].start = __pa(addr);
 	msm_fb_resources[0].end = msm_fb_resources[0].start + size - 1;
 	pr_info("allocating %lu bytes at %p (%lx physical) for fb\n",
 		size, addr, __pa(addr));
+*/
 
-
-	/* RAM Console can't use alloc_bootmem(), since that zeroes the
-	 * region */
-	size = 128 * SZ_1K;
-	ram_console_resource[0].start = msm_fb_resources[0].end+1;
-	ram_console_resource[0].end = ram_console_resource[0].start + size - 1;
-	pr_info("allocating %lu bytes at (%lx physical) for ram console\n",
-			size, (unsigned long)ram_console_resource[0].start);
-	/* We still have to reserve it, though */
-	reserve_bootmem(ram_console_resource[0].start,size,0);
-
-
-        size = pmem_kernel_ebi1_size;
-        if (size) {
-                addr = alloc_bootmem_aligned(size, 0x100000);
-              android_pmem_kernel_ebi1_pdata.start = __pa(addr);
-                android_pmem_kernel_ebi1_pdata.size = size;
-                pr_info("allocating %lu bytes at %p (%lx physical) for kernel"
-                        " ebi1 pmem arena\n", size, addr, __pa(addr));
-        }
-
+	size = fb_size ? : MSM_FB_SIZE;
+	addr = alloc_bootmem_align(size, 0x1000);
+	msm_fb_resources[0].start = __pa(addr);
+	msm_fb_resources[0].end = msm_fb_resources[0].start + size - 1;
+	pr_info("allocating %lu bytes at %p (%lx physical) for fb\n",
+		size, addr, __pa(addr));
+  
 }
 
 static struct memtype_reserve msm7x27_reserve_table[] __initdata = {
