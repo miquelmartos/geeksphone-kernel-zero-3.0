@@ -15,7 +15,7 @@
 #include <linux/delay.h>
 
 #include <mach/pmic.h>
-#include <mach/vreg.h>
+#include <linux/regulator/consumer.h>
 
 #include <linux/platform_device.h>
 #include <linux/miscdevice.h>
@@ -260,20 +260,13 @@ static unsigned bt_config_power_off[] = {
 
 static int bluetooth_power(int on)
 {
-	struct vreg *vreg_bt;
 	int pin, rc;
+	static struct regulator *vreg_bt;
 
 	printk(KERN_DEBUG "%s\n", __func__);
 
 	/* do not have vreg bt defined, gp6 is the same */
 	/* vreg_get parameter 1 (struct device *) is ignored */
-	vreg_bt = vreg_get(NULL, "gp6");
-
-	if (IS_ERR(vreg_bt)) {
-		printk(KERN_ERR "%s: vreg get failed (%ld)\n",
-		       __func__, PTR_ERR(vreg_bt));
-		return PTR_ERR(vreg_bt);
-	}
 
 	if (on) {
 		for (pin = 0; pin < ARRAY_SIZE(bt_config_power_on); pin++) {
@@ -286,42 +279,48 @@ static int bluetooth_power(int on)
 				return -EIO;
 			}
 		}
+		vreg_bt = regulator_get(NULL, "gp6");
+
+		if (IS_ERR(vreg_bt)) {
+			rc = PTR_ERR(vreg_bt);
+			pr_err("%s: could get not regulator: %d\n",
+					__func__, rc);
+			goto out;
+		}
 
 		/* units of mV, steps of 50 mV */
-		rc = vreg_set_level(vreg_bt, 2600);
-		if (rc) {
-			printk(KERN_ERR "%s: vreg set level failed (%d)\n",
-			       __func__, rc);
-			return -EIO;
+		rc = regulator_set_voltage(vreg_bt, 2600000, 2600000);
+		if (rc < 0) {
+			pr_err("%s: could not set voltage: %d\n", __func__, rc);
+			goto bt_vreg_fail;
 		}
-		rc = vreg_enable(vreg_bt);
-		if (rc) {
-			printk(KERN_ERR "%s: vreg enable failed (%d)\n",
-			       __func__, rc);
-			return -EIO;
+		rc = regulator_enable(vreg_bt);
+		if (rc < 0) {
+			pr_err("%s: could not enable regulator: %d\n",
+					 __func__, rc);
+			goto bt_vreg_fail;
 		}
 		msleep(100);
 
 		printk(KERN_ERR "BlueZ required power up * QCOM\r\n");
-		gpio_direction_output(94, 0);
-		gpio_direction_output(20, 0);
+		gpio_direction_output(94,0);
+		gpio_direction_output(20,0);
 		msleep(1);
 		printk(KERN_ERR "BlueZ required power up * QCOM delay 1ms\r\n");
-		printk(KERN_ERR
-		       "BlueZ required power up * QCOM delay 100ms\r\n");
-		gpio_direction_output(94, 1);
+		printk(KERN_ERR "BlueZ required power up * QCOM delay 100ms\r\n");
+		gpio_direction_output(94,1);
 		msleep(100);
-		gpio_direction_output(20, 1);
+		gpio_direction_output(20,1);
 		msleep(100);
+
 	} else {
-		msleep(100);
-		rc = vreg_disable(vreg_bt);
-		if (rc) {
-			printk(KERN_ERR "%s: vreg disable failed (%d)\n",
-			       __func__, rc);
-			return -EIO;
+		rc = regulator_disable(vreg_bt);
+		if (rc < 0) {
+			pr_err("%s: could not disable regulator: %d\n",
+					 __func__, rc);
+			goto bt_vreg_fail;
 		}
-		msleep(100);
+		regulator_put(vreg_bt);
 		for (pin = 0; pin < ARRAY_SIZE(bt_config_power_off); pin++) {
 			rc = gpio_tlmm_config(bt_config_power_off[pin],
 					      GPIO_CFG_ENABLE);
@@ -333,11 +332,17 @@ static int bluetooth_power(int on)
 			}
 		}
 		printk(KERN_ERR "BlueZ required power down * QCOM\r\n");
-		gpio_direction_output(94, 0);
-		gpio_direction_output(20, 0);
+		gpio_direction_output(94,0);
+		gpio_direction_output(20,0);
 	}
 	return 0;
+
+bt_vreg_fail:
+	regulator_put(vreg_bt);
+out:
+	return rc;
 }
+
 
 #define HCIT_VERSION	"0.1"
 

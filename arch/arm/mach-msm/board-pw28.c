@@ -87,12 +87,8 @@
 #define MSM_PMEM_MDP_SIZE	0xDBB000
 #define MSM_PMEM_ADSP_SIZE	0x986000
 #define MSM_PMEM_AUDIO_SIZE	0x5B000
-
-#ifdef CONFIG_FB_MSM_TRIPLE_BUFFER
-#define MSM_FB_SIZE		0x233000
-#else
 #define MSM_FB_SIZE		0x177000
-#endif
+
 
 #define PMEM_KERNEL_EBI1_SIZE	0x1C000
 #endif
@@ -970,7 +966,7 @@ int wlan_power(int flag)
 	}
 
 	/* units of mV, steps of 50 mV */
-	rc = regulator_set_voltage(vreg_wlan, 2850000, 2850000);
+	rc = regulator_set_voltage(vreg_wlan, 1800000, 2850000);
 		if (rc < 0) {
 			pr_err("%s: could not set voltage: %d\n",
 					 __func__, rc);
@@ -1019,6 +1015,7 @@ static int synaptics_power(int on) {
 		vreg_syn = regulator_get(NULL, "gp4");
 
 		rc = regulator_set_voltage(vreg_syn, 2600000, 2600000);
+		// Original code 2800000?? gp4 = 2600000
 		if (rc < 0) {
 			pr_err("%s: could not set voltage: %d\n",
 					 __func__, rc);
@@ -1191,7 +1188,7 @@ static void msm_camera_vreg_config(int vreg_en)
         gpio_request(15, "mt9d112");
 
 	if (vreg_gp2 == NULL) {
-		vreg_gp2 = regulator_get(NULL, "gp2");
+		vreg_gp2 = regulator_get(NULL, "gp10");
 		if (IS_ERR(vreg_gp2)) {
 			rc = PTR_ERR(vreg_gp2);
 			pr_err("%s: could not get regulator: %d\n",
@@ -1199,7 +1196,8 @@ static void msm_camera_vreg_config(int vreg_en)
 			return;
 		}
 
-		rc = regulator_set_voltage(vreg_gp2, 2800000, 2800000);
+		rc = regulator_set_voltage(vreg_gp2, 1800000, 1800000);
+		// original code 2850000 ?? gp2 = 1800000
 		if (rc < 0) {
 			pr_err("%s: could not set voltage: %d\n",
 					__func__, rc);
@@ -1215,7 +1213,7 @@ static void msm_camera_vreg_config(int vreg_en)
 			goto cam_vreg_fail;
 		}
 
-		rc = regulator_set_voltage(vreg_gp3, 2800000, 2800000);
+		rc = regulator_set_voltage(vreg_gp3, 2850000, 2850000);
 		if (rc < 0) {
 			pr_err("%s: could not set voltage: %d\n", __func__, rc);
 			goto cam_vreg2_fail;
@@ -2056,14 +2054,6 @@ static void __init msm_msm7x2x_allocate_memory_regions(void)
 {
 	void *addr;
 	unsigned long size;
-/*
-	size = fb_size ? : MSM_FB_SIZE;
-	addr = alloc_bootmem(size);
-	msm_fb_resources[0].start = __pa(addr);
-	msm_fb_resources[0].end = msm_fb_resources[0].start + size - 1;
-	pr_info("allocating %lu bytes at %p (%lx physical) for fb\n",
-		size, addr, __pa(addr));
-*/
 
 	size = fb_size ? : MSM_FB_SIZE;
 	addr = alloc_bootmem_align(size, 0x1000);
